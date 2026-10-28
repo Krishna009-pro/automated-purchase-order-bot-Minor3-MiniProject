@@ -1,0 +1,107 @@
+// ==============================================================================
+// AUTOMATION ANYWHERE A360 BOT SCRIPT: SAP_PO_Updater_Bot
+// Description: Automated Purchase Order Management Bot in SAP ME22N
+// ==============================================================================
+
+// ------------------------------------------------------------------------------
+// VARIABLES DEFINITION
+// ------------------------------------------------------------------------------
+// String: sExcelPath = "$AAApplicationPath$\PO_List.xlsx"
+// String: sSapMockPath = "$AAApplicationPath$\SAP_Mockup.xlsx"
+// String: sScreenshotsDir = "$AAApplicationPath$\Screenshots\"
+// String: sEmailsDir = "$AAApplicationPath$\Emails\"
+// Record: rPOData
+// Number: nCounter = 0
+// String: sPONumber
+// String: sVendor
+// String: sQty
+// String: sPrice
+// String: sDeliveryDate
+// String: sRecipientEmail
+// String: sScreenshotFile
+// String: sEmailSubject
+
+// ------------------------------------------------------------------------------
+// TASKBOT COMMAND SEQUENCE
+// ------------------------------------------------------------------------------
+
+1. Folder: Create "$sScreenshotsDir$" if not exists
+2. Folder: Create "$sEmailsDir$" if not exists
+
+3. Try
+   a. If Window: Exists "SAP Logon 770"
+      - Window: Activate "SAP Logon 770"
+   b. Else
+      - Application: Open Program/File "C:\Program Files (x86)\SAP\FrontEnd\SAPgui\saplogon.exe"
+      - Window: Wait for window "SAP Logon 770" (Timeout: 15s)
+   c. End If
+
+   // Open and read Purchase Orders Queue
+   d. Excel Advanced: Open "$sExcelPath$" as session "sExcelSession" (Sheet: "Purchase_Orders", Contains Header: True)
+   e. Excel Advanced: Get Multiple Cells (All rows) -> DataTable: "dtPOList"
+
+   // Loop through records
+   f. Loop: For Each Row in DataTable "dtPOList" -> Record: "rPOData"
+      
+      // Check if already processed
+      If "$rPOData[13]$" != "Processed" Then
+         
+         // Extract values
+         Assign "$sPONumber$" = "$rPOData[0]$"
+         Assign "$sVendor$" = "$rPOData[2]$"
+         Assign "$sQty$" = "$rPOData[5]$"
+         Assign "$sPrice$" = "$rPOData[6]$"
+         Assign "$sDeliveryDate$" = "$rPOData[11]$"
+         Assign "$sRecipientEmail$" = "$rPOData[12]$"
+
+         // Navigate to ME22N in SAP
+         SAP: Set Text (Transaction Box) = "/nME22N"
+         SAP: Press Key = "Enter"
+         
+         // Load PO
+         SAP: Click "Other Purchase Order" (Shift+F5)
+         SAP: Set Text (PO Input Modal) = "$sPONumber$"
+         SAP: Click "Other Document" (Enter)
+         
+         // Update Item Fields
+         SAP: Set Text ("tblItem[0]/colQty") = "$sQty$"
+         SAP: Set Text ("tblItem[0]/colPrice") = "$sPrice$"
+         SAP: Set Text ("tblItem[0]/colDeliveryDate") = "$sDeliveryDate$"
+         
+         // Save PO
+         SAP: Click Toolbar Button "Save" (Ctrl+S)
+         Wait: 1000 ms
+
+         // Capture Verification Screenshot
+         Assign "$sScreenshotFile$" = "$sScreenshotsDir$PO_$sPONumber$_updated.png"
+         Screen: Capture Window "SAP GUI*" to "$sScreenshotFile$"
+
+         // Update Mock ERP / Audit Trail in Excel
+         Excel Advanced: Open "$sSapMockPath$" as session "sSapSession"
+         Excel Advanced: Set Cell Value by column "Doc_Status" = "Approved"
+         Excel Advanced: Close session "sSapSession" (Save: True)
+
+         // Dispatch Email Notification to Stakeholder
+         Assign "$sEmailSubject$" = "[PO UPDATE CONFIRMATION] PO #" + "$sPONumber$" + " Status: Approved"
+         Email: Send
+            - To: "$sRecipientEmail$"
+            - Subject: "$sEmailSubject$"
+            - Body Type: HTML
+            - Body: "<h3>Purchase Order Updated</h3><p>PO #$sPONumber$ has been approved and updated in SAP.</p>"
+            - Attachments: "$sScreenshotFile$"
+
+         // Mark PO as Processed in Queue
+         Excel Advanced: Set Cell Value ("Process_Status") = "Processed" in session "sExcelSession"
+         Excel Advanced: Set Cell Value ("Current_Status") = "Approved" in session "sExcelSession"
+
+      End If
+   g. End Loop
+
+   // Wrap up
+   h. Excel Advanced: Close session "sExcelSession" (Save: True)
+   i. Log to File "$AAApplicationPath$\bot_execution.log": "RPA Run Completed Successfully."
+
+4. Catch Exception e
+   a. Log to File "$AAApplicationPath$\bot_execution.log": "ERROR in Bot: " + "$e.message$"
+   b. Email: Send Alert to Admin
+5. End Try

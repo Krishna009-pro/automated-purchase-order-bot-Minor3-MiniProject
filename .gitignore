@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data files
+*.xlsx
+*.xls
+*.csv
+*.log
+
+# Reports and screenshots
+*.png
+*.jpg
+*.jpeg
+*.html
+*.md
+*.pdf
+
+# Bot execution log
+*.log

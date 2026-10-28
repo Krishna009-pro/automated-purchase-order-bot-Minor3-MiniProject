@@ -1,0 +1,83 @@
+================================================================================
+AUTOMATED PURCHASE ORDER MANAGEMENT BOT (RPA) - STEP-BY-STEP WORKFLOW
+================================================================================
+
+Target System: SAP ERP ECC / S/4HANA (or SAP_Mockup.xlsx simulation)
+Transaction Code: ME22N (Change Purchase Order)
+Input Queue: PO_List.xlsx
+Output Artifacts: Screenshots/ (*.png), Emails/ (*.html, *.eml), SAP_Audit_Trail
+
+--------------------------------------------------------------------------------
+DETAILED BOT EXECUTION FLOW:
+--------------------------------------------------------------------------------
+
+Phase 1: Environment Initialization & Verification
+--------------------------------------------------
+1. Verify required working directories exist:
+   - Screenshots/
+   - Emails/
+2. Check connectivity to SAP:
+   - If real SAP GUI (saplogon.exe) is active: connect via Windows Scripting API.
+   - If SAP is not available: initialize simulated SAP engine (Desktop GUI & SAP_Mockup.xlsx).
+3. Open Excel file 'PO_List.xlsx' and load worksheet 'Purchase_Orders'.
+
+Phase 2: Loop & Process Purchase Orders
+---------------------------------------
+4. Filter/Loop through rows where Process_Status != 'Processed':
+   For each Purchase Order Record ($rPOData$):
+   
+   a. Extract PO Fields:
+      - PO_Number = $rPOData[0]$
+      - Vendor_Name = $rPOData[2]$
+      - Item_Code = $rPOData[3]$
+      - Item_Description = $rPOData[4]$
+      - Quantity = $rPOData[5]$
+      - Unit_Price = $rPOData[6]$
+      - Total_Amount = $rPOData[7]$
+      - Target_Status = $rPOData[10]$ (Approved)
+      - Delivery_Date = $rPOData[11]$
+      - Stakeholder_Email = $rPOData[12]$
+
+   b. Access Transaction ME22N:
+      - In SAP command bar, enter '/nME22N' and press Enter.
+      - Click 'Other Purchase Order' (Shift+F5) and enter PO_Number.
+   
+   c. Apply Updates to Order:
+      - Update Header Status to 'Approved'.
+      - Navigate to Item Overview:
+        * Update Item Quantity ($rPOData[5]$).
+        * Update Net Price ($rPOData[6]$).
+        * Update Delivery Date ($rPOData[11]$).
+   
+   d. Save and Commit:
+      - Trigger 'Save' (Ctrl+S or Toolbar Save button).
+      - Verify bottom status bar confirms: "Standard PO {PO_Number} changed".
+
+   e. Capture Visual Verification Proof:
+      - Capture window snapshot of SAP ME22N screen.
+      - Save file to: Screenshots/PO_{PO_Number}_updated_{Timestamp}.png.
+
+   f. Record in Audit Trail:
+      - In SAP_Mockup.xlsx sheet 'SAP_Audit_Trail', record:
+        Audit_ID, Timestamp, ME22N, PO_Number, Changed Fields, Bot ID, SUCCESS.
+
+   g. Dispatch Stakeholder Notification:
+      - Generate executive HTML email template.
+      - Embed captured screenshot as CID inline image.
+      - Save copy to Emails/Email_PO_{PO_Number}_{Timestamp}.html and .eml.
+      - (Optional) Dispatch via configured SMTP server to Stakeholder_Email.
+
+   h. Update Queue Item:
+      - In PO_List.xlsx, set:
+        * Current_Status = 'Approved'
+        * Process_Status = 'Processed'
+        * Processed_At = Current Timestamp
+      - Highlight completed row in soft green.
+
+Phase 3: Wrap Up & Reporting
+----------------------------
+5. Save and close all open Excel workbooks.
+6. Gracefully terminate SAP session (or close simulator).
+7. Write final execution statistics (total POs, success count, order value)
+   to 'bot_execution.log'.
+================================================================================
