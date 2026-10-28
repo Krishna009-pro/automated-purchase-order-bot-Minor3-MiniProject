@@ -24,13 +24,12 @@ venv/
 *.csv
 *.log
 
-# Reports and screenshots
-*.png
-*.jpg
-*.jpeg
+# Reports and docs (exclude screenshots folder only)
 *.html
 *.md
 *.pdf
+# Screenshots folder
+Screenshots/
 
 # Bot execution log
 *.log
