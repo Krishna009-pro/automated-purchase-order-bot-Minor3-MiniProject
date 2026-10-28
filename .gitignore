@@ -18,18 +18,18 @@ venv/
 *.swo
 *~
 
-# Data files
-*.xlsx
-*.xls
-*.csv
+# Data files (tracked in repo)
+# *.xlsx
+# *.xls
+csv
 *.log
 
 # Reports and docs (exclude screenshots folder only)
 *.html
 *.md
 *.pdf
-# Screenshots folder
-Screenshots/
+# Individual screenshots in root (tracked)
+# Screenshots/ folder excluded for large binary files
 
 # Bot execution log
 *.log
